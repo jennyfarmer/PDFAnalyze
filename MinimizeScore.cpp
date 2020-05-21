@@ -414,6 +414,7 @@ void MinimizeScore::map (double r[], double cdf[], double rawDataPartition[], in
     double zCalc1;
     double endpointCDF;       
     int startPoint = 0;
+    double delta = 10e-10;
     
     for (int k = 0; k < partitionSize; k++) {                
         int j = startPoint;
@@ -434,8 +435,10 @@ void MinimizeScore::map (double r[], double cdf[], double rawDataPartition[], in
         } else {
             z2 = inverse[j];
             endpointCDF = cdf[j];
-        }                             
-        zCalc1 = (rawDataPartition[k] - z1)/(z2 - z1);
+        }       
+        double denominator = (z2 - z1);
+        if (denominator == 0) denominator = delta;
+        zCalc1 = (rawDataPartition[k] - z1) / denominator;
         if (j==0) {
             r[k] = zCalc1*(endpointCDF);     
         } else {                    

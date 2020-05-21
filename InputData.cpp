@@ -257,13 +257,15 @@ void InputData::setAdaptiveDz() {
     sort(inverseVector.begin(), inverseVector.end());
     inverse[0] = inverseVector[0];
     doubleInverse[0] = inverse[0];
+    double delta = 10e-10;
     for (int j = 1; j < inverseSize; j++) {
         inverse[j] = inverseVector[j];
         doubleInverse[count] = (inverse[j-1] + inverse[j])/2.0;
         doubleInverse[count+1] = inverse[j];
         dz[count-1] = doubleInverse[count] - doubleInverse[count-1];
         dz[count] = doubleInverse[count+1] - doubleInverse[count];
-        
+        if (dz[count] == 0) dz[count] = delta;
+        if (dz[count - 1] == 0) dz[count - 1] = delta;
         double hph = dz[count] + dz[count - 1];
         dzWeight1[j] = (pow(dz[count], 3) + pow(dz[count - 1], 3) + 3 * dz[count] * dz[count - 1] * hph ) / (6 * dz[count] * dz[count - 1]);
         dzWeight2[j] = (2 * pow(dz[count - 1], 3) - pow(dz[count], 3) + 3 * dz[count] * pow(dz[count - 1], 2)) / (6 * dz[count - 1] * hph);
