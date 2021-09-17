@@ -22,8 +22,13 @@ function [py, y, cy, sqr] = PDFAnalyze(sample, varargin)
 %                           'sqr'       scaled quantile residual
 %                           'combined'  pdf and sqr plotted on one figure
 %
-%                           Multiple plot types occur with multiple
-%                           name/value pairs specified
+%                           Multiple plot types occur with multiple name/value pairs specified
+%
+%                           The equation for Scaled Quantile Residual (SQR) is given by SQR = sqrt(N+2)*(u - uniform-u) where N is the number of data samples. 
+%                           SQR plots are very useful as a diagnostic measure because they are sample size invariant and have universal characteristics 
+%                           independent of the true PDF. The SQR plot type plots the SQR for each data sample by position, highlighting in red those that fall 
+%                           outside of the expected 98% threshold.
+%
 %
 %   'EstimationType'        The default estimation method is PDFEstimate.
 %                           Additional KDE methods are available:
@@ -36,6 +41,7 @@ function [py, y, cy, sqr] = PDFAnalyze(sample, varargin)
 %                           distribution to plot on the same figure as the
 %                           estimate for use with 'pdf' plot type.  Useful
 %                           for comparison to a known distribution.
+%
 %
 %   Example: Plot the estimate of random sample for a Normal distribution
 %   along with the true Normal distribution:
