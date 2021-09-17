@@ -84,13 +84,13 @@ Valid parameters are as follows:
 
 	Parameter			Value
 	'PlotType'			Produces any combination of three plot types:
-				'pdf'		probability density function for the
-                	           		'sqr'		scaled quantile residual
-				'combined'		pdf and sqr plotted on one figure
+					'pdf'		probability density function for the
+                	           	'sqr'		scaled quantile residual (see NOTES)
+					'combined'	pdf and sqr plotted on one figure
 
 				Multiple plot types occur with multiple name/value pairs specified
 
-	'EstimationType'		The default estimation method is PDFEstimate.
+	'EstimationType'	The default estimation method is PDFEstimate.
 
 				Additional KDE methods are available:
 				'kde1'		built-in MATLAB function ksdensity
@@ -141,20 +141,20 @@ parameters	(optional) a MATLAB structure of options listed below
 
 Optional Input Parameters
 
-Name			Default Value
-parameters.SURDtarget	[40]      
+Name				Default Value
+parameters.SURDtarget		[40]      
 parameters.SURDmin		[5]
-parameters.SURDmax	[100] 
-parameters.LagrangeMin	[1]
-parameters.LagrangeMax	[200]
+parameters.SURDmax		[100] 
+parameters.LagrangeMin		[1]
+parameters.LagrangeMax		[200]
 parameters.lowBound		[calculated]
-parameters.highBound	[calculated]      
+parameters.highBound		[calculated]      
 parameters.integrationPoints	[calculated]
 parameters.debug		[false]
 parameters.partition		[1025]      
-parameters.scoreType	['QZ']
+parameters.scoreType		['QZ']
 parameters.outlierCutoff	[7]
-parameters.adaptiveDx	[true]
+parameters.adaptiveDx		[true]
 
 
 
@@ -165,9 +165,9 @@ y		range of values in PDF (independent variable)
 pdf		Probability Density Function (PDF)
 cdf		Cummulative Denstiy Function
 sqr		Scaled Quantile Residual
-lagrange		Lagrange coefficients
+lagrange	Lagrange coefficients
 score		Value returned by the score-type selected
-confidence		SURD threshold achieved 
+confidence	SURD threshold achieved 
 SURD		Sample Uniform Random Data            
 
 
@@ -188,7 +188,7 @@ Sample Uniform Random Data (SURD) loosely correlates with the strength of the so
 2. Scaled Quantile Residual
 
 The equation for Scaled Quantile Residual (SQR) is given by SQR = sqrt(N+2)*(u - uniform-u) where N is the number of data samples. 
-SQR plots are very useful as a diagnostic measure because they are sample size invariant and have universal characteristics independent of the true PDF.
+SQR plots are very useful as a diagnostic measure because they are sample size invariant and have universal characteristics independent of the true PDF.  The SQR plot type plots the SQR for each data sample by position, highlighting in red those that fall outside of the expected 98% threshold.
 
 
 3. Lagrange Coefficients
