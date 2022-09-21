@@ -16,8 +16,8 @@
 #include "OutputControl.h"
 
 
-
 OutputControl::OutputControl() {
+    
 #ifdef outputR
     debug = false;
 #endif
@@ -46,28 +46,6 @@ void OutputControl::displayOnMATLAB(std::shared_ptr<matlab::engine::MATLABEngine
     }
 }
 
-void OutputControl::setLagrange(int first, vector <double> lagrange, int N, vector<int> indices, vector<double> x, vector<double> cdf, vector<double> data, vector<double> r, double max, double min) {
-    matlab::data::ArrayFactory factory;
-    matlab::data::Array firstVal = factory.createScalar(first);
-    matlab::data::Array lagrangeVal = factory.createArray({lagrange.size(), 1}, lagrange.begin(), lagrange.end());  
-    matlab::data::Array maxVal = factory.createScalar(max);   
-    matlab::data::Array minVal = factory.createScalar(min);  
-    std::vector<matlab::data::Array> args = {firstVal, lagrangeVal, maxVal, minVal};
-//    matlabPtr->feval("plotLagrange", args);
-    
-    matlab::data::Array xVal = factory.createArray({x.size(), 1}, x.begin(), x.end());
-    matlab::data::Array cdfVal = factory.createArray({cdf.size(), 1}, cdf.begin(), cdf.end());
-    matlab::data::Array dataVal = factory.createArray({data.size(), 1}, data.begin(), data.end());
-    matlab::data::Array rVal = factory.createArray({r.size(), 1}, r.begin(), r.end());
-    matlab::data::Array nVal = factory.createScalar(N);
-    matlab::data::Array indVal = factory.createArray({indices.size(), 1}, indices.begin(), indices.end());
-    args = {firstVal, nVal, indVal, xVal, cdfVal, dataVal, rVal};
-//    matlabPtr->feval("plotSQR", args);
-    
-    args = {firstVal, rVal, nVal, indVal, lagrangeVal};
-    matlabPtr->feval("analyzeScore", args);
-    
-}
 
 void OutputControl::setPtr(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr) {
     this->matlabPtr = matlabPtr; 

@@ -35,15 +35,17 @@ InputData::InputData(const InputParameters& input) {
     rightOutliers = false;
     
 }
-
-InputData::InputData(const InputData& orig) {
-}
+//InputData::InputData(const InputData& orig) {
+//}
 
 InputData::~InputData() {    
     delete [] doubleInverse;
     delete [] transformedZeroOne;
     delete [] inverse;
     delete [] dz;
+    delete [] dzWeight1;
+    delete [] dzWeight2;
+    delete [] dzWeight3;
 }
 
 bool InputData::readData() {
@@ -56,7 +58,7 @@ bool InputData::readData() {
         out.error("Failed to open data file " + input.inputFile);
         return false;
     }
-	
+	    
     int temp = 0;
     while (getline(fin, line)) {
         double test = atof(line.c_str());
@@ -71,13 +73,17 @@ bool InputData::readData() {
         return false;        
     }
    
-    fin.close();   
+    fin.close();       
+    sort(rawData.begin(), rawData.end());
     return processData();
 }
     
-void InputData::setData(vector<double> data) {
-    rawData.resize(data.size());
+void InputData::setData(vector<double> & data) {       
+    rawData.clear();
+    rawData.reserve(data.size());
     rawData = data;
+    sort(rawData.begin(), rawData.end());
+    
 }
 
 bool InputData::processData() {   
@@ -87,7 +93,6 @@ bool InputData::processData() {
         if (nPoints > 1500) nPoints = 1500;
     }
     
-    sort(rawData.begin(), rawData.end());
     minimumRaw = rawData[0];
     maximumRaw = rawData[rawData.size() - 1];
     if (minimumRaw == maximumRaw) {        
@@ -101,12 +106,18 @@ bool InputData::processData() {
     } else {
         double max = rawData[nValues - 1];
         maximumCalc = max + (max - rawData[rawData.size() - 5]);
+        if (maximumCalc < max) {
+            maximumCalc = max;
+        }
     }
     if (input.lowerBoundSpecified) {  
         minimumCalc = input.lowerBound;
     } else {
         double min = rawData[0];
         minimumCalc = min + (min - rawData[4]);
+        if (minimumCalc > min) {
+            minimumCalc = min;
+        }
     }
     
     if (input.outlierCutoff > 0) {        
@@ -118,6 +129,7 @@ bool InputData::processData() {
     }
     setAdaptiveDz();  
     cheby.initialize(doubleInverse, 2*nPointsAdjust-1);
+    cheby.initializeDx(doubleInverse, 2*nPointsAdjust-1);
     return true;
 }
 
@@ -146,13 +158,13 @@ bool InputData::processData() {
                 q3 = (rawData[(int)quarter + (int)middle] + rawData[(int)quarter + (int)middle + 1])/2;
             } else {
                 q1 = rawData[(int)quarter];
-                q3 = rawData[(int)quarter + (int) middle] + 1;
+                q3 = rawData[(int)quarter + (int) middle];
             }
         }               
         double iqr = input.outlierCutoff*(q3 - q1);
         double leftOutlier = q1 - iqr;
-        double rightOutlier = q3 + iqr;                   
-        
+        double rightOutlier = q3 + iqr;    
+                
         if (maximumCalc > rightOutlier) {
             maximumCalc = rightOutlier;
             rightOutliers = true;                
@@ -212,40 +224,60 @@ void InputData::setAdaptiveDz() {
     double next;
     bool breakOut = false;
     double dzMax = 1.0/(nPoints - 1);
+    double maxSmoothWindow = 10;
           
     int skip = (int) (N/(nPoints - 1));
-    if (skip==0) skip = 1;                       
-    
+    if (skip==0) skip = 1;
+           
     inverseVector.push_back(0);    
-    inverseVector.push_back(transformedZeroOne[0]);
-    
-    for (int b = skip; b <= (N + skip); b+=skip) {
+    for (int b = 0; b <= (N + skip); b+=skip) {
         if (b >= (N-1)) {
-            inverseVector.push_back(transformedZeroOne[N-1]);
+            next = 1;
             breakOut = true;
         }
         else {
             next = transformedZeroOne[b];
-            double test = next - last;
-            double difference = fabs(test);
-            if (difference > dzMax) {
-                double steps =  difference/dzMax;
-                int iSteps = (int) steps;
-                for (int k = 0; k < (iSteps + 1); k++) {
-                    double add = inverseVector[inverseVector.size() - 1] + difference/(iSteps + 1);
-                    inverseVector.push_back(add);
-                }
-            } else { 
-                inverseVector.push_back(next);
+        }
+        double test = next - last;
+        double difference = fabs(test);
+        if (difference > dzMax) {
+            double steps =  difference / dzMax;
+            int iSteps = (int) steps;
+            int wStepSize = iSteps + 1;
+            double add = difference / (iSteps + 1);
+            if (iSteps > maxSmoothWindow) {
+                double windowSteps = (iSteps + 1) / maxSmoothWindow;
+                int wSteps = ceil(windowSteps);
+                wStepSize = (int) (iSteps * 1.0 + 1) / wSteps;
             }
-        }      
+            double sum = 0;
+            int windows = 0;
+            for (int k = 0; k < (iSteps + 1); k++) {
+                inverseVector.push_back(inverseVector[inverseVector.size() - 1] + add);
+                sum += add;
+                windows ++;
+                if ((windows) > wStepSize) {
+                    smoothWindow.push_back((windows) * 2);
+                    smoothSize.push_back(sum);
+                    sum = 0;
+                    windows = 0;
+                }
+            }
+            if (windows > 0) {
+                smoothWindow.push_back((windows) * 2);
+                smoothSize.push_back(sum);
+            }
+        } else { 
+            inverseVector.push_back(next);
+            smoothWindow.push_back(2);
+            smoothSize.push_back(difference);
+        }
         if (breakOut) break;
         last = next; 
     }            
     
-    inverseVector.push_back(1);
+    inverseVector[inverseVector.size() - 1] = 1;
     int inverseSize = inverseVector.size();
-    
     inverse = new double[inverseSize];
     doubleInverse = new double[2 * inverseSize - 1];
     dz = new double[2 * inverseSize - 2];    
@@ -276,34 +308,3 @@ void InputData::setAdaptiveDz() {
     nPointsAdjust = inverseSize;        
 }
     
-
-
-void InputData::setUniformDz() {
-   
-    N = transformedData.size();    
-    dz = new double[nPoints];     
-    double dzMax = 1.0/(nPoints - 1);        
-                      
-    for (int b = 0; b < nPoints; b++) {
-        dz[b] = dzMax;
-    }            
-        
-    inverse = new double[nPoints];
-    inverse[0] = 0;
-    for (int j = 1; j < nPoints; j++) {
-        inverse[j] = inverse[j-1] + dz[j-1];
-    }
-    inverse[nPoints - 1] = 1.0;
-    
-    doubleInverse = new double[2 * nPoints - 1];
-    int count = 0;
-    for (int j = 1; j < nPoints; j++) {        
-        doubleInverse[count] = inverse[j-1];
-        doubleInverse[count+1] = (inverse[j-1] + inverse[j])/2.0;
-        count += 2;
-    }        
-    doubleInverse[count] = (inverse[nPoints-1] + 1.0) / 2.0;    
-    nPointsAdjust = nPoints;        
-}
-    
-   

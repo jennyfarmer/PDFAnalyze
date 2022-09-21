@@ -82,13 +82,8 @@ double ScoreLL::calculateScore(double r[], int N, int p){
     }      
     likelihood /= p;
     likelihoodSquare /= p;
-    SURD = likelihood;  
     QZVariance = -likelihoodSquare;
-//    if (minimizeVariance) {
         return -likelihoodSquare;
-//    } else {
-//        return likelihood;
-//    }
 }
  
           

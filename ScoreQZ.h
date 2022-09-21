@@ -22,11 +22,13 @@ using namespace std;
 
 class ScoreQZ : public Score{
 public:
-    ScoreQZ(double confidenceTarget, double confidenceMin, double confidenceMax); 
+    ScoreQZ();
     virtual ~ScoreQZ();
-    virtual vector <int> getIndices (int N, int p);
-    virtual vector <int> setIndices (int N, int p);
-    double calculateScore(double r[], int N, int p);
+    virtual vector <int> getIndices (int N, int p, double * data);
+    virtual vector <int> setIndices (int N, int p, double * data, bool index);
+    void setSigma(int N, int p);
+    double calculateScorePartition(double r[], int p);
+    double calculateScore(double r[], int N);
     void getValues();   
 private:
     vector <double> sigma;

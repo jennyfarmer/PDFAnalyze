@@ -10,10 +10,10 @@
 #define	CALLPDF_H
 
 
+//#include "mexAdapter.hpp"
 #include "InputParameters.h"
 #include "InputData.h"
 #include "Score.h"
-#include "ScoreLL.h"
 #include "ScoreQZ.h"
 #include "MinimizeScore.h"
 #include "WriteResults.h"
@@ -25,6 +25,7 @@
 
 
 using namespace std;
+//using namespace matlab::data;
 
 class callPDF {
     
@@ -49,10 +50,16 @@ public:
     void setDebug(bool debug);
     void setOutlierCutoff(double cutoff);
     void setAdaptiveDx(bool adaptive);
+    void setAdaptivePartition(int adaptivePartition);
+    void setEstimationPoints(vector <double>  estimationPoints);
     
     bool solutionFailed;        
     double thresholdScore;  
     double confidenceScore;
+    
+    int initPartitionSize;
+    int partitionSize;
+    int targetPartitionSize;
     
     vector <double> Vr;    
     vector <double> Vcdf;
@@ -62,8 +69,9 @@ public:
     vector <double> Vsqr;
     vector <string> VError;
 private:
-    InputParameters *input;
+    InputParameters input;  
     OutputControl out;
+    int adaptivePartition;
     int sampleLength;
     bool debug = false;
     bool minVariance = false;

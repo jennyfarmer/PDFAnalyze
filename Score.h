@@ -24,36 +24,29 @@
 using namespace std;
 
 class Score {
-public:
-    double targetScore;
-    double minimumScore;
-    double maximumScore;
-    
+public:        
     Score() {};
     Score(const Score& orig) {};
-    Score(double confidenceTarget, double confidenceMin, double confidenceMax); 
     virtual ~Score();
     
-    virtual double calculateScore(double r[], int N, int p) {return 0;}
-    virtual vector <int>  setIndices (int N, int p) {}
-    virtual vector <int> getIndices (int N, int p) {return indices;}
+    virtual double calculateScorePartition(double r[], int p) {return 0;}
+    virtual double calculateScore(double r[], int N) {return 0;}
+    virtual vector <int>  setIndices (int N, int p, double * data, bool index) {return indices;}
+    virtual vector <int> getIndices (int N, int p, double * data) {return indices;}
     
     double getLikelihood() {return likelihood;};
-    void setVarianceMin(bool qzVar) {minimizeVariance = qzVar;}
+//    void setVarianceMin(bool qzVar) {minimizeVariance = qzVar;}
     double getConfidence(double score);    
-    double SURD;    
-    double QZVariance = 0;
+    double QZVariance;
+        
+    double getTargetScore(double SURD);  
     
 protected:
     vector <double> scores;
     vector <double> SURDs;
     double likelihood;
     vector <int> indices;
-        
-    bool minimizeVariance = true;
-    
-    double getTargetScore(double SURD);  
-    const double PI = 3.141592;    
+            
     void getValues();
     
 };

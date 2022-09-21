@@ -48,10 +48,14 @@ public:
     int nPointsAdjust;
     ChebyShev cheby;
     
+    vector <int> smoothWindow;
+    vector <double> smoothSize;
+        
+    InputData() {};
     InputData(const InputParameters& input);
-    InputData(const InputData& orig);
+//    InputData(const InputData& orig);
     bool readData();
-    void setData(vector <double> data);
+    void setData(vector <double> & data);
     vector<int> realIdx;
     bool processData();
     OutputControl out;   
@@ -66,7 +70,7 @@ private:
     vector <double> tempData;
     bool transformData();
     void setAdaptiveDz();
-    void setUniformDz();
+//    void setUniformDz();
     void identifyOutliers(); 
 };
 

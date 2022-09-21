@@ -31,7 +31,7 @@ public:
     
 private:
     double * uniformPowers;
-    double likelihoodSquare = 0;
+    double likelihoodSquare;
 };
 
 #endif	/* SCORE_HPP */

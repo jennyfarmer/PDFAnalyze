@@ -19,7 +19,7 @@ InputParameters::InputParameters() {
     debug = false;
    
     inputPath = "";
-    inputFile = "specifyFilename.txt";
+    inputFile = ".txt";
     outputPath = "";
     writeFile = true;
     writeHeader = true;
@@ -35,33 +35,39 @@ InputParameters::InputParameters() {
     
     scoreType = "QZ";
     SURDMinimum = 5;
-    SURDTarget  = 40;
+    SURDTarget  = 70;
     SURDMaximum = 100;
     initPartitionSize = 1025;
     startSolutionNumber = 0;
     integrationPoints = -1;
-    numberSolutions = 1;
-    numberTrials = 1;
     maxLagrange = 200;//2 for power
     minLagrange = 1;
     nLagrangeAdd = 5;
-    outlierCutoff = 7.0;    
+    outlierCutoff = 7.0;
+    smooth = true;
     
     fractionLagrangeAdd = 0.1;
     initSigma = 0.1;
     finalSigma =0.001;
     decayFactor = sqrt(2.0);
-    loopMax = 30;
+    loopMax = 100;                  // updated from 30; September 2020
     
-    symmetryPoint = 0;
-    symmetry = false;}
+    estimatePoints = false;
+    
+ }
 
-InputParameters::InputParameters(const InputParameters& orig) {
-}
+//InputParameters::InputParameters(const InputParameters& orig) {
+//}
 
 InputParameters::~InputParameters() {
 }
 
+
+void InputParameters::setEstimationPoints(vector<double> x) {
+    estimatedPoints.resize(x.size());
+    estimatedPoints =  x;
+    estimatePoints = true;
+}
 
 bool InputParameters::userInput(int argc, char**  argv){
     
@@ -183,15 +189,7 @@ bool InputParameters::userInput(int argc, char**  argv){
         case 'n':                                                               
             maxLagrange = atoi(optarg);
             out.print("maximum Lagrange = ", maxLagrange);
-            break;
-        case 'c':                                                               
-            numberSolutions = atoi(optarg);
-            out.print("number of solutions = ", numberSolutions);
-            break;
-        case 't':                                                               
-            numberTrials = atoi(optarg);
-            out.print("number of trials = ", numberTrials);
-            break;
+            break;       
         case 'm':                                                               
             minLagrange = atoi(optarg);
             out.print("minimum Lagrange = ", minLagrange);
@@ -206,9 +204,7 @@ bool InputParameters::userInput(int argc, char**  argv){
         printUsage();
         return false;
     }
-    if (numberTrials < numberSolutions) {
-        out.print("Number of requested solutions exceeds number of trials");
-    }
+   
     if (SURDMaximum < SURDMinimum) {
         out.print("maximum coverage cannot be less than minimum coverage values");
         return false;
@@ -245,6 +241,6 @@ void InputParameters::printUsage() {
     out.print( " -n    maximum number of Lagrange multipliers");
     out.print( " -m    minimum number of Lagrange multipliers");
     out.print( " -y    penalty flag [on/off]");
-    out.print( " -d    debug [on/off]");
+    out.print( " -g    debug [on/off]");
 }
 

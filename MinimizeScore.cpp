@@ -28,10 +28,11 @@ MinimizeScore::MinimizeScore() {
     mode = 0; 
     duration = 0; 
     bestScore = 0; 
+    smoothError = 0; 
 }
 
-MinimizeScore::MinimizeScore(const MinimizeScore& orig) {
-}
+//MinimizeScore::MinimizeScore(const MinimizeScore& orig) {
+//}
 
 MinimizeScore::~MinimizeScore() {
     delete [] trialRandom;
@@ -48,25 +49,30 @@ vector <double> MinimizeScore::getLagrange() {
     return lagrange;
 }
 
-bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Score& score) {         
+bool MinimizeScore::minimize(const InputParameters& input, const InputData& data) {
     
 #ifdef clock
     clock_t algorithmTime;                                                  
     algorithmTime = clock();
 #endif
-  
-    int minLagrange = input->minLagrange;
-    maxLagrange = input->maxLagrange;
-    int nLagrangeAdd = input->nLagrangeAdd;
-    double fractionLagrangeAdd = input->fractionLagrangeAdd;
-    int loopMax = input->loopMax;
-    double initSigma = input->initSigma;
-    double finalSigma = input->finalSigma;
-    double decayFactor = input->decayFactor;   
-    int partitionSize = input->initPartitionSize;    
+#ifndef outputR
+    srand(seed);//time(0));
+#endif
+    
+    ScoreQZ score = ScoreQZ();
+    
+    int minLagrange = input.minLagrange;
+    maxLagrange = input.maxLagrange;
+    int nLagrangeAdd = input.nLagrangeAdd;
+    double fractionLagrangeAdd = input.fractionLagrangeAdd;
+    int loopMax = input.loopMax;
+    double initSigma = input.initSigma;
+    double finalSigma = input.finalSigma;
+    double decayFactor = input.decayFactor;   
+    partitionSize = input.initPartitionSize;    
     
     bool phaseOne = true;    
-    int targetPartition = data.N;         
+    targetPartition = data.N;         
     bool incPartition = true;
     
     if (phaseOne) {
@@ -81,6 +87,9 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
     this->dzWeight3 = data.dzWeight3;
     double * transformedZeroOne = data.transformedZeroOne;
     this->cheby = data.cheby;
+    this->smooth = input.smooth;
+    this->smoothWindow = data.smoothWindow;
+    this->smoothSize = data.smoothSize;
     this->nPoints = data.nPointsAdjust;
     this->N = data.N;
     if (partitionSize > N) {
@@ -106,14 +115,14 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
     initSigma *= sigmaFactor;    
         
     T = cheby.getAllTerms(maxLagrange);
+    Tdx = cheby.getAllTermsDx(maxLagrange);
        
     double lastLagrangeScore = 0;
     int lagrangeAddCount = 0;
     
     trialRandom = new double[N];
     bestRandom = new double [N];    
-    rawDataPartition = new double [N];
-   
+    rawDataPartition = new double [N];   
     
     for (int c = 0; c < N; c++) {
         trialRandom[c] = 0;
@@ -131,63 +140,34 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
     }    
     
     double trialScore = 0;
-    bestScore = -numeric_limits<double>::max();
-    double targetScore = score.targetScore;
-    double minimumScore = score.minimumScore;   
-    double maximumScore = score.maximumScore;    
+    double targetScore = score.getTargetScore(input.SURDTarget);
+    double minimumScore = input.SURDMinimum;//score.minimumScore;   
+    double maximumScore = input.SURDMaximum;//score.maximumScore;    
     
     bool funnelFinished    = false;
     bool solutionNotFound  = false;   
-    bool continueLooking   = true;         
-    bool partitionNotFound = false;
-          
+    bool continueLooking   = true;    
     
-    vector <int> indices = score.setIndices(N, N);
-    for (int i = 0; i < N; i++) {
-        rawDataPartition[i] = transformedZeroOne[i]; 
-    }
-    bestScore = score.calculateScore(rawDataPartition, N, N);  
-    out.print("initial score SURD", score.getLikelihood());
-    out.print("initial variance SURD", score.QZVariance);       
+    vector <int> indices;
+    double globalScore = score.calculateScore(transformedZeroOne, N);
+    out.print("initial global score", globalScore);       
+    indices = score.getIndices(N, partitionSize, transformedZeroOne); 
+    partitionSize = indices.size();
+    targetPartition = indices.size();
+    initPartitionSize = targetPartition;
     
-    if ((score.getLikelihood() > minimumScore) && (score.getLikelihood() < maximumScore)) { 
-        out.print("*Uniform Solution found");
-        bestThreshold = score.getLikelihood();
-        for (int c = 0; c < N; c++) {
-            trialRandom[c] = transformedZeroOne[c];
-        }
-        delete [] trialLagrange;
-        
-        if (input->writeQQ) {
-            WriteResults write;
-            string filename;
-            filename = input->outputPath + input->qqFile;
-            write.writeQQ(filename, trialRandom, partitionSize, false);
-        }
-        if (input->writeSQR) {
-            WriteResults write; 
-            string filename;
-            filename = input->outputPath  + input->sqrFile;
-            write.writeQQ(filename, trialRandom, partitionSize, true);
-        }
-        
-        return 0;       
-    }      
-        
-    
-    indices = score.getIndices(N, partitionSize); 
     for (int i = 0; i < partitionSize; i++) {
         rawDataPartition[i] = transformedZeroOne[indices[i]]; 
     }
     
-    indices = score.setIndices(targetPartition, partitionSize);   
+    indices = score.setIndices(targetPartition, partitionSize, transformedZeroOne, false);   
     double * cdf;
     cdf = new double[nPoints];
     calculatePDFAdaptive(cdf, trialLagrange, mode); 
     map(trialRandom, cdf, rawDataPartition, partitionSize);  
     
     
-    bestScore = score.calculateScore(trialRandom, targetPartition, partitionSize); 
+    bestScore = score.calculateScorePartition(trialRandom, partitionSize); 
     out.print("initial score", score.getLikelihood());
     out.print("initial variance", score.QZVariance);
     out.print("partition size", partitionSize);
@@ -195,7 +175,7 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
     out.print("target size", targetPartition);
     
     if (score.getLikelihood() > targetScore) {     
-        bestScore --;                                                           //force socre to be re-evaluated in loop
+        bestScore --;                                                           //force score to be re-evaluated in loop
     } else {
         if (mode == 1) {
             if (maxLagrange > 1) {
@@ -205,42 +185,39 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
                 bestLagrange[1] = 0;
                 mode = 2;
             } else {           
-                out.error("*Maximum number of lagrange multipliers exceeded", maxLagrange);
+                out.print("*Maximum number of lagrange multipliers exceeded", maxLagrange);
             }
         } 
     }
       
-    for (int i = 0; i < partitionSize; i++) {
-        bestRandom[i] = trialRandom[i];
-    }         
     while (partitionSize <= N) {      
-        partitionNotFound = false;
         while (continueLooking) {
             loopCount++;     
             delete [] cdf;
             cdf = new double[nPoints]; 
             calculatePDFAdaptive(cdf, trialLagrange, mode);       
-            map(trialRandom, cdf, rawDataPartition, partitionSize);
-                        
-            trialScore = score.calculateScore(trialRandom, targetPartition, partitionSize);  
+            map(trialRandom, cdf, rawDataPartition, partitionSize);                        
+            trialScore = score.calculateScorePartition(trialRandom, partitionSize) - smoothError;
             if (trialScore > bestScore) {  
                 ostringstream strOut;
-                strOut << "SURD score: " << score.getLikelihood() << ";  variance: " << score.QZVariance <<  ";  lagrange: " << mode << ";  partition size: " << partitionSize << "; target:  " << targetPartition;       
-               
+                strOut << "SURD score: " << score.getLikelihood() << ";  global: " << globalScore << ";  variance: " << score.QZVariance << ";  smooth: " << smoothError <<  ";  lagrange: " << mode << ";  partition size: " << partitionSize << "; target:  " << targetPartition;       
+            
                 out.print(strOut.str());
                 if (score.getLikelihood() < maximumScore) {
                     bestScore = trialScore;  
-                    bestThreshold = score.getLikelihood();
                 }
                 bestLagrange[0] = normalize;
                 for (int k = 1; k < mode; k++) {
                     bestLagrange[k] = trialLagrange[k];
                 }
-                for (int i = 0; i < partitionSize; i++) {
-                    bestRandom[i] = trialRandom[i];
-                }
                 if ((score.getLikelihood() > targetScore) && (score.getLikelihood() < maximumScore)) { 
                     out.print("*Solution found");
+                    map(bestRandom, cdf, transformedZeroOne, N);
+                    globalScore = score.calculateScore(bestRandom, N);    
+                    out.print("Global Score", globalScore);
+                    if ((globalScore > targetScore) && (globalScore < maximumScore)) {
+                        continueLooking = false;
+                    }                    
                     break;       
                 }    
             }
@@ -250,37 +227,48 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
                 if (currentSigma < finalSigma) funnelFinished = true;
                 loopCount = 0;
             }
-  
-            
-            if (funnelFinished) {                                       
-                if (mode < 5) inc = 1;
+              
+            if (funnelFinished) {      
+                double * bestCDF = new double[nPoints]; 
+                calculatePDFAdaptive(bestCDF, bestLagrange, mode);       
+                map(bestRandom, bestCDF, transformedZeroOne, N);
+                globalScore = score.calculateScore(bestRandom, N); 
+                delete [] bestCDF;
+                out.print("Global Score", globalScore);
+                if ((globalScore > targetScore) && (globalScore < maximumScore)) { 
+                    continueLooking = false;
+                    break;
+                }       
+                if (mode < 4) inc = 1;
                 else inc = 2;
+                if (mode >= 50) inc = 5;
+                if (mode >= 100) inc = 10;
                 mode += inc;    
+                out.print("*Adding lagrange", mode); 
                                 
-                if (mode > maxLagrange) {            
-                    if (score.getLikelihood() > minimumScore) {
-                        out.print("*Lower threshold accepted", score.getLikelihood());                            
+                if (mode > maxLagrange) {
+                    if ((globalScore > minimumScore) && (globalScore < maximumScore)) {
+                        out.print("*Lower threshold accepted", score.getLikelihood());    
                     } else {
                         out.print("*Maximum number of lagrange multipliers exceeded", maxLagrange);
                         solutionNotFound = true;
-                        continueLooking = false;
-                    }
+                    }                    
+                    continueLooking = false;
                     mode -= inc;
                     break;
-                }   
-                out.print("*Adding lagrange", mode);   
-                funnelFinished = false;  
-                   
+                }                   
+                                  
+                                 
                 if (fabs(bestScore-lastLagrangeScore)/fabs(lastLagrangeScore) < fractionLagrangeAdd) { 
                     if (lagrangeAddCount > nLagrangeAdd) { 
-                        if ((score.getLikelihood() > minimumScore) && (score.getLikelihood() < maximumScore)) {
-                            out.print("*Improvement not found in required number of attempts");
+                        if ((globalScore > minimumScore) && (globalScore < maximumScore)) {
                             out.print("*Lower threshold accepted", score.getLikelihood());
-                            targetScore = score.getLikelihood();
                         } else {
                             out.print("*Improvement not found in required number of attempts");
-                            partitionNotFound = true;
+                            solutionNotFound = true;
                         }
+                        mode -= inc;
+                        continueLooking = false;
                         break;
                     } else {
                         lagrangeAddCount++;   
@@ -289,6 +277,8 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
                     lastLagrangeScore = bestScore;
                     lagrangeAddCount = 0;
                 } 
+                
+                funnelFinished = false;    
                 currentSigma = initSigma;
                 funnelDiffusion(bestLagrange, trialLagrange, mode, currentSigma, 1); 
             } else {
@@ -301,26 +291,20 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
         }        
         
         if (incPartition) {
-            if (partitionSize == N) break;
-            partitionSize = (partitionSize - 1) * 2 + 1;
-            if (partitionSize > N) {
-                partitionSize = N;   
-            }
-            indices = score.setIndices(N, partitionSize); 
+            partitionSize = N;
+            indices = score.setIndices(N, partitionSize, transformedZeroOne, true); 
             for (int i = 0; i < partitionSize; i++) {
-                rawDataPartition[i] = transformedZeroOne[indices[i]]; 
-                
+                rawDataPartition[i] = transformedZeroOne[indices[i]];                 
             }
             bestScore = -numeric_limits<double>::max();
         } else {
             if (partitionSize == N) break; //added 11/3/2018
-            targetPartition = (targetPartition - 1) * 2 + 1;
-           
+            targetPartition = (targetPartition - 1) * 2 + 1;           
             if (targetPartition >= N) {
                 targetPartition = N;
                 incPartition = true;       
             } 
-            indices = score.setIndices(targetPartition, partitionSize);       
+            score.setIndices(targetPartition, partitionSize, transformedZeroOne, false);
             bestScore = -numeric_limits<double>::max(); 
         }
         
@@ -329,40 +313,36 @@ bool MinimizeScore::minimize(InputParameters *input, const InputData& data, Scor
             initSigma = originalInitSigma*sigmaFactor;
             finalSigma = originalFinalSigma*sigmaFactor;
             currentSigma = initSigma;
-        }    
-        
-        
+        }            
     }  
         
 #ifdef clock
     algorithmTime = clock() - algorithmTime;  
     duration = ((float) algorithmTime)/CLOCKS_PER_SEC;
 #endif
+      
     
-    if (input->writeQQ) {
-        WriteResults write;
-        string filename;
-        filename = input->outputPath + input->qqFile;
-        write.writeQQ(filename, trialRandom, partitionSize, false);
+    bestThreshold = score.getConfidence(globalScore);    
+    
+    if (!solutionNotFound) {
+        if (input.writeQQ) {
+            WriteResults write;
+            string filename;
+            filename = input.outputPath + input.qqFile;
+            write.writeQQ(filename, bestRandom, N, false);
+        }
+        if (input.writeSQR) {
+            WriteResults write; 
+            string filename;
+            filename = input.outputPath  + input.sqrFile;
+            write.writeQQ(filename, bestRandom, N, true);
+        }
     }
-    if (input->writeSQR) {
-        WriteResults write; 
-        string filename;
-        filename = input->outputPath  + input->sqrFile;
-        write.writeQQ(filename, trialRandom, partitionSize, true);
-    }
+        
     delete [] trialLagrange;
-    delete [] cdf;
+    delete [] cdf;    
 
-    if (partitionNotFound) {
-        solutionNotFound = true;
-    }
-    if (solutionNotFound) {
-        out.error("Solution not found");
-    }
-    
-    return solutionNotFound;
- 
+    return solutionNotFound; 
 }
 
 
@@ -373,17 +353,34 @@ void MinimizeScore::calculatePDFAdaptive (double cdf[], double lagrange[], int m
     pdf = new double[pdfPoints];
     double * x;
     x = new double[pdfPoints];
+    double * dx;
+    dx = new double[pdfPoints];
     for (int i = 0; i < pdfPoints; i++) {
         x[i] = 0;
+        dx[i] = 0;
     }
     
     for (int k = 0; k < pdfPoints; k++) { 
         for (int n = 0; n < modes; n++) {
             x[k] += lagrange[n]*T[n][k];
+            dx[k] += lagrange[n]*Tdx[n][k];
         }
         pdf[k] = exp(x[k]);
     }              
-        
+    
+       
+    if (smooth) {
+        smoothError = 0; 
+        int k = 0;
+        double A = 0;
+        int windowSize = smoothWindow.size();
+        for(int m = 0; m < windowSize; m++) { 
+            A = x[k] + (dx[k]) * (smoothSize[m]);
+            smoothError += (x[k + smoothWindow[m]] - A) * (x[k + smoothWindow[m]] - A);
+            k += smoothWindow[m];           
+        }
+    }
+    
     int count = 1;                
     cdf[0] = 0;
     double cummulative = cdf[0];    
@@ -403,6 +400,7 @@ void MinimizeScore::calculatePDFAdaptive (double cdf[], double lagrange[], int m
         cdf[k] /= constant;
     }        
     delete [] x;
+    delete [] dx;
     delete [] pdf;
 }
 
@@ -464,17 +462,21 @@ void MinimizeScore::funnelDiffusion(double original[], double updated[], int arr
 
 double MinimizeScore::random(double m, double s) {
     double x1, x2, w = 2, y1;
-
     
     if (useLast) {
         y1 = y2;
         useLast = false;
     } else {
         do {  
-//            x1 = 2.0 * ranX() - 1;
-//            x2 = 2.0 * ranX() - 1;
-            x1 = 2*(1.0*rand()/RAND_MAX) - 1;
-            x2 = 2*(1.0*rand()/RAND_MAX) - 1;
+#ifdef outputR
+            x1 = 2.0 * unif_rand() - 1;
+            x2 = 2.0 * unif_rand() - 1;
+#else            
+//            x1 = 2*(1.0 * rand() / RAND_MAX) - 1;
+//            x2 = 2*(1.0 * rand() / RAND_MAX) - 1;
+            x1 = 2*(1.0 * ranX()) - 1;
+            x2 = 2*(1.0 * ranX()) - 1;
+#endif
             w = x1 * x1 + x2 * x2;
         } while ( w >= 1.0 );
 
@@ -493,6 +495,7 @@ double MinimizeScore::ranX() {
 }  
 
 #else
+// not currently used
 double MinimizeScore::ranX() {
     seed = seed * 1566083941 + 1;    
     return seed * 2.328306e-10 + 0.5;       

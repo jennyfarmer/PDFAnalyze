@@ -18,6 +18,7 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
     matlabPtr = getEngine();
     out.debug = true;    
 
+    
     matlab::data::ArrayFactory factory;
     if (nParameters < 1) {        
         out.displayError(matlabPtr, "Data sample required");
@@ -65,7 +66,7 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
             } else if (strcmp(field.c_str(), "LagrangeMax") == 0) {                
                 structField = matlabStructArray[0][fieldNames[count++]];
                 pd->setLagrangeMax(structField[0]);
-            } else if (strcmp(field.c_str(), "integrationPoints") == 0) {                
+            } else if (strcmp(field.c_str(), "l") == 0) {                
                 structField = matlabStructArray[0][fieldNames[count++]];                
                 pd->setPoints(structField[0]);
             } else if (strcmp(field.c_str(), "lowBound") == 0) {                
@@ -86,6 +87,14 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
             } else if (strcmp(field.c_str(), "minVariance") == 0) {                
                 structField = matlabStructArray[0][fieldNames[count++]];
                 pd->setVariance(structField[0]);
+            } else if (strcmp(field.c_str(), "estimationPoints") == 0) {                    
+                structField = matlabStructArray[0][fieldNames[count++]];                    
+                int estimateSize = structField.getNumberOfElements();  
+                vector <double> estimateData;
+                for (int i = 0; i < estimateSize; i++) {
+                    estimateData.push_back(structField[i]);  
+                }                       
+                pd->setEstimationPoints(estimateData);
             } else if (strcmp(field.c_str(), "adaptiveDx") == 0) {
                 structField = matlabStructArray[0][fieldNames[count++]];
                 pd->setAdaptiveDx(structField[0]);
@@ -103,7 +112,10 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
     TypedArray<int> MsolutionFailed = factory.createArray(sz, failed.begin(), failed.end());
     outputs[0] = MsolutionFailed;             
 
-    if (!pd->solutionFailed) {
+//    if (pd->solutionFailed) {
+//        delete pd; 
+//        out.displayError(matlabPtr, "Solution Not Found");
+//    } else {
         sz = {pd->Vx.size(), 1, 1};        
         TypedArray<double> Mx = factory.createArray(sz, pd->Vx.begin(), pd->Vx.end());
         outputs[1] = Mx;
@@ -131,11 +143,29 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
         sz = {confidence.size(), 1, 1};
         TypedArray<double> Mconfidence = factory.createArray(sz, confidence.begin(), confidence.end());
         outputs[7] = Mconfidence;         
-
+        
         sz = {pd->Vr.size(), 1, 1};
         TypedArray<double> Mr = factory.createArray(sz, pd->Vr.begin(), pd->Vr.end());
         outputs[8] = Mr;
-    } 
-    delete pd;  
-
+        
+        vector <double> initPartitionSize;
+        initPartitionSize.push_back(pd->initPartitionSize);
+        sz = {initPartitionSize.size(), 1, 1};
+        TypedArray<double> MinitPartitionSize = factory.createArray(sz, initPartitionSize.begin(), initPartitionSize.end());
+        outputs[9] = MinitPartitionSize;      
+        
+        vector <double> partitionSize;
+        partitionSize.push_back(pd->partitionSize);
+        sz = {partitionSize.size(), 1, 1};
+        TypedArray<double> MpartitionSize = factory.createArray(sz, partitionSize.begin(), partitionSize.end());
+        outputs[10] = MpartitionSize;      
+        
+        vector <double> targetPartitionSize;
+        targetPartitionSize.push_back(pd->targetPartitionSize);
+        sz = {targetPartitionSize.size(), 1, 1};
+        TypedArray<double> MtargetPartitionSize = factory.createArray(sz, targetPartitionSize.begin(), targetPartitionSize.end());
+        outputs[11] = MtargetPartitionSize;      
+        delete pd; 
+//    }   
+    
 }

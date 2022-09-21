@@ -35,8 +35,11 @@ public:
     WriteResults(const WriteResults& orig);
     virtual ~WriteResults();
    
-    void writeSolution(InputParameters *input, InputData *data, MinimizeScore *solution, int solutionNumber, int trial, Score *score, bool failed);
-    void createSolution(InputParameters *input, InputData *data, MinimizeScore *solution, Score *score);
+    void writeSolution(const InputParameters& input, const InputData& data, MinimizeScore& solution, 
+                       Score score, bool failed, string fileNameAdd);
+    void writeSolution(const InputParameters& input, const InputData& data, MinimizeScore& solution, 
+                       string fileNameAdd);
+    void createSolution(const InputParameters& input, const InputData& data, MinimizeScore& solution);
     
     void writeColumn(string filename, double r[], int length);
     void writeColumn(string filename, int r[], int length);
@@ -49,8 +52,11 @@ public:
     vector <double> x;
     vector <double> PDF;   
     vector <double> CDF;   
+    vector <double> xPoints;
+    vector <double> PDFPoints;  
     vector <double> SQR;
     vector <double> L;
+    vector <double> R;
     
     OutputControl out;
 
