@@ -1,5 +1,5 @@
 ================================================================
-PDFAnalyze, Version 1.0, April 2020
+PDFAnalyze, Version 1.0, September 2022
 Jenny Farmer jfarmer@carolina.rr.com
 Donald Jacobs djacobs1@uncc.edu
 University of North Carolina at Charlotte
@@ -10,12 +10,23 @@ University of North Carolina at Charlotte
 GENERAL INFORMATION
 ================================================================
 
-PDFAnalyze computes a probability density estimate for a one-dimensional data sample and produces optional plots for analysis.  
-It is based on a nonparametric probability density estimation method called PDFEstimator.
+The PDFAnalyze package includes the following high-level MATLABfunctions:
 
-Please cite this publication if you use this code for your research:
+1. PDFe.m:  Computes a nonparametric probability density estimate for a multivariate data sample for 1 to 5 variables.
+		(Calls EstimatePDFmv.mex function, which can also be called directly)
 
-https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0196937
+2. PDFAnalyze.m:  Computes a probability density estimate for a one-dimensional data sample and produces optional plots for analysis.  
+			(Calls EstimatePDF.mex function, which can also be called directly)
+ 
+
+
+
+
+Please cite at least one of these publication if you use this code for your research:
+
+Jenny, F. and J. Donald, High throughput nonparametric probability density estimation. PLoS ONE, 2018. 13(5): p. e0196937.
+
+Farmer, Jenny, and Donald J. Jacobs. “MATLAB Tool for Probability Density Assessment and Nonparametric Estimation.” SoftwareX, vol. 18, Elsevier BV, June 2022, p. 101017, doi:10.1016/j.softx.2022.101017.
 
 
 
@@ -33,7 +44,9 @@ To install, select [Add-Ons/Get Add-Ons] from the HOME menu within MATLAB and se
 
 3. Run the CompilePDF.m script in MATLAB to create a MATLAB Executable (mex) 
 
-4. (optional) Verify installation by running example.m script in MATLAB 
+4. Run the CompilePDFmv.m script in MATLAB to create a MATLAB Executable (mex) 
+
+5. (optional) Verify installation by running example.m script in MATLAB 
 
 
 
@@ -44,10 +57,14 @@ PlotBeta.m
 EstimatePDF.m
 FigureSettings.m
 GetTargets.m
-example.m; 
-CompilePDF.m; 
+example.m
+CompilePDF.m
+CompilePDFmv.m 
 
-EstimatePDF.cpp; EstimatePDF.h 
+EstimatePDF.cpp; EstimatePDF.h
+EstimatePDFmv.cpp; EstimatePDFmv.h
+JointProbability.cpp; JointProbability.h
+Variable.cpp; Variable.h
 callPDF.cpp;  callPDF.h
 ChebyShev.cpp; ChebyShev.h
 InputData.cpp; InputData.h
@@ -55,7 +72,6 @@ InputParameters.cpp; InputParameters.h
 MinimizeScore.cpp; MinimizeScore.h
 Score.cpp; Score.h
 ScoreQZ.cpp; ScoreQZ.h
-ScoreLL.cpp; ScoreLL.h
 WriteResults.cpp; WriteResults.h
 OutputControl.cpp; OutputControl.h
 
@@ -64,7 +80,31 @@ README.txt
 
 
 =================================================================
-USAGE
+PDFe USAGE
+=================================================================
+
+
+[pdfPoints, pdfEst] = PDFe(r);
+
+
+
+Input Parameters 
+
+r	random data sample, one column of data for each variable
+
+
+
+Output Parameters
+
+pdfEst	the joint probability density function; a matrix of nVariable dimensions: [nGrids x nGrids x ... x nGrids]
+pdfPoints	evaluation points for jp; one row for each variable
+
+
+
+
+
+=================================================================
+PDFAnalyze USAGE
 =================================================================
 
 
@@ -122,11 +162,45 @@ Example 2: Plot the scaled quantile residual (SQR) for an estimate of the Normal
 
 
 
+
+
+
+
 =================================================================
-PDFEstimator Usage
+EstimatePDFmv USAGE
 =================================================================
 
-The PDFEstimator is invoked from within PDFAnalyze and can be customized through a collection of advanced input and output options.
+EstimatePDFmv is invoked from within PDFe.m but can be called directly to customize the resolution
+
+
+Usage
+
+[jp, x] = EstimatePDFmv(r, nSamples, nVariables, nGrids);
+
+
+
+Input Parameters (all required)
+
+r		random data sample, one column of data for each variable
+nSamples	the number of rows in r, representing the number of samples per variable
+nVariables	the number of columns in r, representing the number of variables
+nGrids	the resolution, per variable, for desired output.
+
+
+Output Parameters
+
+jp		the joint probability density function; an array of size (nVariable)^(nGrids)
+x		evaluation points for jp; an array of size (nVariable) * (nGrids)
+
+
+
+
+
+=================================================================
+EstimatePDF USAGE
+=================================================================
+
+EstimatePDF is invoked from within PDFAnalyze.m and can be customized through a collection of advanced input and output options.
 
 
 
@@ -174,7 +248,10 @@ SURD		Sample Uniform Random Data
 
 
 
+
+=================================================================
 NOTES
+=================================================================
 
 The following section includes a few brief notes concerning more advanced input and output options available, and how they may affect performance of the estimation.  
 For a greater understanding of the methodology used, please see the publication referenced in the GENERAL INFORMATION section.
