@@ -66,7 +66,7 @@ void MexFunction::operator()(matlab::mex::ArgumentList outputs, matlab::mex::Arg
             } else if (strcmp(field.c_str(), "LagrangeMax") == 0) {                
                 structField = matlabStructArray[0][fieldNames[count++]];
                 pd->setLagrangeMax(structField[0]);
-            } else if (strcmp(field.c_str(), "l") == 0) {                
+            } else if (strcmp(field.c_str(), "integrationPoints") == 0) {                
                 structField = matlabStructArray[0][fieldNames[count++]];                
                 pd->setPoints(structField[0]);
             } else if (strcmp(field.c_str(), "lowBound") == 0) {                
