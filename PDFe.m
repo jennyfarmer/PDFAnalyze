@@ -30,6 +30,8 @@ function [pdfPoints, pdfEst] = PDFe(r)
         pdfEst = reshape(jp, nGrids, nGrids, nGrids, nGrids, nGrids);
     end
     pdfPoints = transpose(reshape(x, nGrids, nVariables));
-    pdfEst = permute(pdfEst, flip(1:nVariables));    
+    if nVariables > 2
+%         pdfEst = permute(pdfEst, flip(1:nVariables));
+    end
 
 end
